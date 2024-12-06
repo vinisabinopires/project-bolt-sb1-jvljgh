@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Monitor Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .event-list {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .event-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .event-item:last-child {
+            border-bottom: none;
+        }
+        .status-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .status-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h1>Security Monitor Dashboard</h1>
+        
+        <div class="status-panel">
+            <div class="status-card">
+                <h3>File System Events</h3>
+                <p id="fileEvents">0 events today</p>
+            </div>
+            <div class="status-card">
+                <h3>HTTP Events</h3>
+                <p id="httpEvents">0 suspicious requests</p>
+            </div>
+            <div class="status-card">
+                <h3>System Status</h3>
+                <p id="systemStatus">Monitoring Active</p>
+            </div>
+        </div>
+
+        <div class="event-list">
+            <h2>Recent Events</h2>
+            <div id="events"></div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const eventsDiv = document.getElementById('events');
+        const fileEventsEl = document.getElementById('fileEvents');
+        const httpEventsEl = document.getElementById('httpEvents');
+        
+        let fileEventCount = 0;
+        let httpEventCount = 0;
+
+        socket.on('securityEvent', (event) => {
+            // Update counters
+            if (event.type === 'file') {
+                fileEventCount++;
+                fileEventsEl.textContent = `${fileEventCount} events today`;
+            } else if (event.type === 'http') {
+                httpEventCount++;
+                httpEventsEl.textContent = `${httpEventCount} suspicious requests`;
+            }
+
+            // Add event to list
+            const eventEl = document.createElement('div');
+            eventEl.className = 'event-item';
+            eventEl.innerHTML = `
+                <strong>${new Date(event.timestamp).toLocaleString()}</strong>
+                <p>${formatEvent(event)}</p>
+            `;
+            eventsDiv.insertBefore(eventEl, eventsDiv.firstChild);
+        });
+
+        function formatEvent(event) {
+            if (event.type === 'file') {
+                return `File ${event.event}: ${event.path}`;
+            } else if (event.type === 'http') {
+                return `Suspicious HTTP ${event.method} request to ${event.path} (Status: ${event.statusCode})`;
+            }
+            return JSON.stringify(event);
+        }
+    </script>
+</body>
+</html>
